@@ -1,0 +1,12 @@
+{
+  "name": "repo-frontend-angular-demo",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "echo \"Demo Angular project (estructura mínima)\"",
+    "build": "echo \"Compilaría el proyecto Angular aquí\""
+  },
+  "dependencies": {
+    "@angular/core": "^17.0.0"
+  }
+}

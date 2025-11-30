@@ -1,0 +1,43 @@
+name: Sync Copilot Angular Pack
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+
+jobs:
+  sync-angular-pack:
+    runs-on: ubuntu-latest
+    env:
+      CENTRAL_REPO: MarioPalacios89/copilot-enterprise-prompt-packs
+
+    steps:
+      - name: Checkout repositorio consumidor
+        uses: actions/checkout@v4
+
+      - name: Checkout repositorio central
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CENTRAL_REPO }}
+          path: central
+          token: ${{ secrets.GH_TOKEN_READ_PACKS }}
+
+      - name: Copiar pack frontend / angular
+        run: |
+          mkdir -p .github
+          rm -rf .github/prompts || true
+          rm -f .github/copilot-instructions.md || true
+          cp -R central/frontend/angular/.github/* .github/
+
+      - name: Revisar cambios
+        run: git status --short || true
+
+      - name: Crear Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "sync: update Copilot Frontend Angular Pack"
+          branch: "sync/copilot-frontend-angular-pack"
+          title: "Sync Copilot Frontend Angular Pack"
+          body: |
+            Este PR sincroniza el pack de Copilot **Frontend / Angular** desde el repositorio central.
+          token: ${{ secrets.GITHUB_TOKEN }}
