@@ -29,6 +29,10 @@ jobs:
           rm -f .github/copilot-instructions.md || true
           cp -R central/frontend/angular/.github/* .github/
 
+      - name: Eliminar copia local del repo central
+        run: |
+          rm -rf central
+
       - name: Revisar cambios
         run: git status --short || true
 
