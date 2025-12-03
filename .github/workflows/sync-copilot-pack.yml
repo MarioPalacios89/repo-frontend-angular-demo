@@ -1,0 +1,85 @@
+name: Sync Copilot Pack (Multistack)
+
+on:
+  workflow_dispatch:
+    inputs:
+      layer:
+        description: "Capa tecnológica (frontend/backend)"
+        required: false
+      stack:
+        description: "Stack tecnológico (angular, react, azure-functions, etc.)"
+        required: false
+
+  schedule:
+    - cron: "0 3 * * *"   # diario 3 AM UTC (ajustar según necesidad)
+
+jobs:
+  sync-multistack-pack:
+    runs-on: ubuntu-latest
+
+    env:
+      CENTRAL_REPO: tu-org/copilot-enterprise-prompt-packs
+      DEFAULT_LAYER: frontend
+      DEFAULT_STACK: angular
+
+    steps:
+      - name: Checkout repositorio consumidor
+        uses: actions/checkout@v4
+
+      - name: Checkout repositorio central
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CENTRAL_REPO }}
+          path: central
+          token: ${{ secrets.GH_TOKEN_READ_PACKS }}
+
+      - name: Determinar layer/stack efectivos
+        id: cfg
+        run: |
+          LAYER="${{ github.event.inputs.layer }}"
+          STACK="${{ github.event.inputs.stack }}"
+
+          if [ -z "$LAYER" ]; then
+            LAYER="${DEFAULT_LAYER}"
+          fi
+
+          if [ -z "$STACK" ]; then
+            STACK="${DEFAULT_STACK}"
+          fi
+
+          echo "LAYER=$LAYER" >> $GITHUB_OUTPUT
+          echo "STACK=$STACK" >> $GITHUB_OUTPUT
+          echo "Usando pack: $LAYER / $STACK"
+
+      - name: Copiar pack desde repo central
+        run: |
+          LAYER="${{ steps.cfg.outputs.LAYER }}"
+          STACK="${{ steps.cfg.outputs.STACK }}"
+
+          ORIGIN="central/$LAYER/$STACK/.github"
+          echo "ORIGIN=$ORIGIN"
+
+          if [ ! -d "$ORIGIN" ]; then
+            echo "ERROR: No existe el pack $LAYER/$STACK en el repo central."
+            exit 1
+          fi
+
+          mkdir -p .github
+          rm -rf .github/prompts || true
+          rm -f .github/copilot-instructions.md || true
+
+          cp -R "$ORIGIN"/* .github/
+
+      - name: Ver cambios
+        run: git status --short || true
+
+      - name: Crear Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "sync: Copilot Pack ${{ steps.cfg.outputs.LAYER }}/${{ steps.cfg.outputs.STACK }}"
+          branch: "sync-${{ steps.cfg.outputs.LAYER }}-${{ steps.cfg.outputs.STACK }}"
+          title: "Sync Copilot Pack: ${{ steps.cfg.outputs.LAYER }} / ${{ steps.cfg.outputs.STACK }}"
+          body: |
+            Este PR sincroniza el pack **${{ steps.cfg.outputs.LAYER }} / ${{ steps.cfg.outputs.STACK }}**
+            desde el repositorio central `${{ env.CENTRAL_REPO }}`.
+          token: ${{ secrets.GITHUB_TOKEN }}
